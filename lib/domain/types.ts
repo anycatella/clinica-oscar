@@ -1,0 +1,11 @@
+export type DocumentCategory='analysis'|'study';
+export type Confidence='high'|'medium'|'low';
+export type ReferenceBounds={lower:number|null;upper:number|null;lowerInclusive:boolean;upperInclusive:boolean};
+export type MeasurementInput={indicatorName:string;normalizedName:string|null;kind:'numeric'|'text';rawValue:string;numericValue:number|null;operator:'='|'<'|'>'|'<='|'>='|null;unit:string|null;referenceText:string|null;referenceBounds:ReferenceBounds|null};
+export type MeasurementRecord=MeasurementInput&{id:string;documentId:string;medicalDate:string;reviewed:boolean};
+export type DocumentMetadata={title:string;category:DocumentCategory;medicalDate:string;institution:string|null;subcategory:string|null;summary:string|null;conclusions:string|null;extractionConfidence:Record<string,Confidence>;measurements:MeasurementInput[]};
+export type DocumentRecord=Omit<DocumentMetadata,'measurements'>&{id:string;originalName:string;mime:string;size:number;sha256:string;fileKey:string;uploadedAt:string;updatedAt:string;version:number;reviewStatus:'confirmed';processingStatus:'confirmed'|'deletion-pending';measurements:MeasurementRecord[]};
+export type SessionRecord={id:string;number:number;date:string;time:string|null;status:'scheduled'|'completed'|'cancelled';notes:string;updatedAt:string};
+export type DashboardSummary={latestAnalysisDate:string|null;latestStudyDate:string|null;analysisCount:number;studyCount:number;lastChemoDate:string|null;nextChemoDate:string|null};
+export type ExtractionDraft={dateCandidates:string[];categorySuggestion:DocumentCategory|null;institution:string|null;subcategory:string|null;title:string;summary:string|null;conclusions:string|null;measurements:MeasurementInput[];extractionConfidence:Record<string,Confidence>};
+export type ComparisonRow={key:string;label:string;unit:string|null;earlier:MeasurementRecord|null;later:MeasurementRecord|null;direction:'up'|'down'|'unchanged'|'not-comparable'|'selection-required';normal:boolean|null;currentReference:string|null;candidateIds:Record<string,string[]>};

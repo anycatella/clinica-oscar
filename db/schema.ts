@@ -1,0 +1,3 @@
+import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
+export const documents=sqliteTable('documents',{id:text('id').primaryKey(),sha256:text('sha256').notNull().unique(),medicalDate:text('medical_date').notNull(),category:text('category').notNull(),state:text('state').notNull(),version:integer('version').notNull(),payload:text('payload').notNull()},t=>[index('document_date_idx').on(t.medicalDate,t.id),index('document_category_idx').on(t.category)]);
+export const sessions=sqliteTable('sessions',{id:text('id').primaryKey(),number:integer('number').notNull().unique(),date:text('date').notNull(),payload:text('payload').notNull()},t=>[index('session_date_idx').on(t.date)]);

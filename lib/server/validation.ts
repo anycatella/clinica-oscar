@@ -1,0 +1,10 @@
+import { z } from 'zod';
+import { validateDate } from '../domain/calendar';
+import { AppError } from './errors';
+import type { DocumentMetadata, SessionRecord } from '../domain/types';
+const nullable=z.string().trim().max(30000).nullable();
+const reference=z.object({lower:z.number().finite().nullable(),upper:z.number().finite().nullable(),lowerInclusive:z.boolean(),upperInclusive:z.boolean()}).refine(r=>r.lower===null||r.upper===null||r.lower<=r.upper,'Rango de referencia inválido').nullable();
+const measurement=z.object({indicatorName:z.string().trim().min(1).max(160),normalizedName:z.string().trim().max(160).nullable(),kind:z.enum(['numeric','text']),rawValue:z.string().trim().min(1).max(3000),numericValue:z.number().finite().nullable(),operator:z.enum(['=','<','>','<=','>=']).nullable(),unit:z.string().trim().max(100).nullable(),referenceText:nullable,referenceBounds:reference});
+const metadata=z.object({title:z.string().trim().min(1).max(180),category:z.enum(['analysis','study']),medicalDate:z.string().refine(validateDate,'Revisá la fecha médica'),institution:nullable,subcategory:z.string().trim().max(160).nullable(),summary:nullable,conclusions:nullable,extractionConfidence:z.record(z.enum(['high','medium','low'])),measurements:z.array(measurement).max(300)});
+export function validateMetadata(input:unknown):DocumentMetadata{const result=metadata.safeParse(input);if(!result.success)throw new AppError('Revisá los campos: '+result.error.issues[0].message);return result.data;}
+export function validateSession(input:unknown):Omit<SessionRecord,'id'|'updatedAt'>{const s=z.object({number:z.number().int().min(1).max(10000),date:z.string().refine(validateDate,'Revisá la fecha'),time:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).nullable(),status:z.enum(['scheduled','completed','cancelled']),notes:z.string().trim().max(3000)}).safeParse(input);if(!s.success)throw new AppError('Revisá número, fecha y horario de la sesión.');return s.data;}

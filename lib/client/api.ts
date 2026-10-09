@@ -1,0 +1,5 @@
+import { readLinkKey } from './link-key';
+export class ApiError extends Error{constructor(message:string,public status:number){super(message);}}
+export async function apiResponse(path:string,init?:RequestInit){const key=readLinkKey();const headers=new Headers(init?.headers);if(key)headers.set('Authorization',`Bearer ${key}`);if(init?.body&&!(init.body instanceof FormData))headers.set('Content-Type','application/json');const response=await fetch(path,{...init,headers,cache:'no-store'});if(!response.ok){const body=await response.json().catch(()=>null) as {error?:string}|null;throw new ApiError(body?.error??'No pudimos completar la operación.',response.status);}return response;}
+export async function apiFetch<T>(path:string,init?:RequestInit):Promise<T>{return (await apiResponse(path,init)).json();}
+export async function downloadOriginal(id:string,name:string){const blob=await (await apiResponse(`/api/documents/${id}/file?download=1`)).blob();const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);}

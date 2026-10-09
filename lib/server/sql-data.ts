@@ -1,0 +1,15 @@
+import type { DataService } from '../services/contracts';
+import type { DocumentRecord, SessionRecord } from '../domain/types';
+import { AppError } from './errors';
+export class SqlDataService implements DataService{
+ constructor(private db:Pick<D1Database,'prepare'>){}
+ async listDocuments(){const {results}=await this.db.prepare("SELECT payload FROM documents WHERE state != 'uploading' ORDER BY medical_date DESC,id DESC").all<{payload:string}>();return results.map(r=>JSON.parse(r.payload) as DocumentRecord);}
+ async findDocument(id:string){const row=await this.db.prepare("SELECT payload FROM documents WHERE id=? AND state != 'uploading'").bind(id).first<{payload:string}>();return row?JSON.parse(row.payload) as DocumentRecord:null;}
+ async findByHash(hash:string){const row=await this.db.prepare('SELECT payload,state FROM documents WHERE sha256=?').bind(hash).first<{payload:string;state:string}>();return row?{record:JSON.parse(row.payload) as DocumentRecord,state:row.state}:null;}
+ async claimDocument(r:DocumentRecord){const result=await this.db.prepare("INSERT OR IGNORE INTO documents(id,sha256,medical_date,category,state,version,payload) VALUES(?,?,?,?, 'uploading',?,?)").bind(r.id,r.sha256,r.medicalDate,r.category,r.version,JSON.stringify(r)).run();return result.meta.changes===1;}
+ async activateDocument(id:string){await this.db.prepare("UPDATE documents SET state='confirmed' WHERE id=? AND state='uploading'").bind(id).run();}
+ async updateDocument(r:DocumentRecord,expectedVersion:number){try{const result=await this.db.prepare("UPDATE documents SET sha256=?,medical_date=?,category=?,state=?,version=?,payload=? WHERE id=? AND version=? AND state!='uploading'").bind(r.sha256,r.medicalDate,r.category,r.processingStatus,r.version,JSON.stringify(r),r.id,expectedVersion).run();return result.meta.changes===1;}catch(error){if(String(error).includes('UNIQUE'))throw new AppError('Este original ya pertenece a otro documento.',409);throw error;}}
+ async removeDocument(id:string,expectedVersion?:number){const statement=expectedVersion===undefined?this.db.prepare('DELETE FROM documents WHERE id=?').bind(id):this.db.prepare('DELETE FROM documents WHERE id=? AND version=?').bind(id,expectedVersion);const r=await statement.run();return r.meta.changes===1;}
+ async listSessions(){const {results}=await this.db.prepare('SELECT payload FROM sessions ORDER BY date DESC,number DESC').all<{payload:string}>();return results.map(r=>JSON.parse(r.payload) as SessionRecord);}
+ async saveSession(r:SessionRecord,create:boolean){try{if(create)await this.db.prepare('INSERT INTO sessions(id,number,date,payload) VALUES(?,?,?,?)').bind(r.id,r.number,r.date,JSON.stringify(r)).run();else {const result=await this.db.prepare('UPDATE sessions SET number=?,date=?,payload=? WHERE id=?').bind(r.number,r.date,JSON.stringify(r),r.id).run();if(result.meta.changes!==1)throw new AppError('La sesión ya no existe.',404);}}catch(e){if(String(e).includes('UNIQUE'))throw new AppError('Ya existe una sesión con ese número.',409);throw e;}}
+}
