@@ -1,10 +1,10 @@
-import type { MeasurementRecord, ComparisonRow } from './types';
+import type { MeasurementRecord, MeasurementInput, ComparisonRow } from './types';
 export function groupComparisons(rows:MeasurementRecord[]){
  const groups=new Map<string,{key:string;label:string;unit:string|null;rows:MeasurementRecord[]}>();
  for(const row of rows){if(!row.reviewed)continue;const name=row.normalizedName||row.indicatorName.trim().toLowerCase();const key=JSON.stringify([name,row.unit??'']);const g=groups.get(key)??{key,label:row.normalizedName?row.normalizedName.toUpperCase():row.indicatorName,unit:row.unit,rows:[]};g.rows.push(row);groups.set(key,g);}
  return [...groups.values()].map(g=>({...g,rows:g.rows.sort((a,b)=>b.medicalDate.localeCompare(a.medicalDate))})).sort((a,b)=>a.label.localeCompare(b.label,'es'));
 }
-export function referenceStatus(row:MeasurementRecord):'low'|'normal'|'high'|'unknown'{
+export function referenceStatus(row:MeasurementInput):'low'|'normal'|'high'|'unknown'{
  const b=row.referenceBounds,n=row.numericValue;
  if(row.kind!=='numeric'||row.operator!=='='||n===null||!b||(b.lower===null&&b.upper===null))return 'unknown';
  if(b.lower!==null&&(n<b.lower||(!b.lowerInclusive&&n===b.lower)))return 'low';
