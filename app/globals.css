@@ -60,3 +60,21 @@ button.primary{box-shadow:0 4px 12px #173f3414;border-radius:9px}.upload-main{pa
 @media(max-width:850px){.sidebar{box-shadow:none}.main-content{padding-top:30px}.brand strong{font-size:26px}.topbar{min-height:74px}}
 @media(max-width:600px){.main-content{padding-top:25px}.page-heading h1{font-size:36px}.welcome-card{padding:29px 24px;min-height:270px}.welcome-card h2{font-size:34px}.metric-card{padding-top:21px}.modal-header h2{font-size:1.22em}}
 @media(max-width:600px){.top-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.top-actions summary>span{display:inline}.top-actions .accessibility-menu summary{justify-content:center;border:1px solid var(--border);padding:10px 6px;background:var(--panel);font-size:16px}.top-actions>button:last-of-type{grid-column:1/-1}.top-actions>button{width:100%}}
+
+/* Calendario compacto con detalle del día seleccionado. */
+.calendar-layout{display:grid;grid-template-columns:minmax(310px,390px) minmax(0,1fr);gap:30px;align-items:start}
+.calendar-picker{padding:18px;background:#f1f3eb;border:1px solid var(--border);border-radius:11px;min-width:0}
+.calendar-picker .month-header{gap:8px;margin-bottom:15px}.calendar-picker .month-header h3{font-size:max(18px,.95em);text-align:center;line-height:1.4;min-width:0;letter-spacing:0}
+.calendar-picker .month-header button{background:transparent;border-color:transparent;padding:10px;min-width:48px}
+.calendar-picker .calendar-grid{gap:3px}.calendar-picker .day-label{font-size:max(16px,.82em);padding:6px 0}
+.calendar-date{position:relative;min-width:0;min-height:50px;padding:7px 0;border:1px solid transparent;border-radius:9px;background:transparent;font-size:1em;font-weight:400}
+.calendar-date.outside-month{color:#65776a}.calendar-date.today{border-color:var(--primary)}.calendar-date.has-session{background:#e5ecdf;border-bottom:3px solid var(--gold);font-weight:700}
+.calendar-date.selected{background:var(--primary);color:white;border-color:var(--primary)}.calendar-date:hover{border-color:var(--primary);background:#dce7d7}.calendar-date.selected:hover{background:#103e32}
+.session-marker{position:absolute;bottom:4px;left:calc(50% - 2px);width:4px;height:4px;border-radius:50%;background:currentColor}
+.calendar-legend{display:flex;align-items:flex-start;gap:9px;font-size:max(16px,.85em);color:var(--muted);margin-top:20px}.legend-marker{display:inline-block;flex:0 0 12px;width:12px;height:12px;background:#dce7d7;border-bottom:3px solid var(--gold);border-radius:3px;margin-top:6px}
+.today-button{width:100%;margin-top:8px;background:var(--panel)}.selected-day{min-width:0}.selected-day>h3{font-family:Georgia,'Times New Roman',serif;font-weight:400;font-size:1.45em;line-height:1.35;text-transform:capitalize;margin:3px 0 20px}
+.selected-session{padding:23px;background:#f7f7f0;border:1px solid var(--border);border-left:3px solid var(--gold);border-radius:10px;margin-bottom:18px;overflow-wrap:anywhere}.selected-session h3{margin:8px 0 12px}.selected-session p{margin-bottom:16px}.selected-day-empty{display:flex;align-items:center;gap:14px;padding:25px 22px;border:1px solid var(--border);border-radius:10px;background:var(--bg);margin-bottom:18px}.selected-day-empty p{margin:0}
+:root[data-contrast=true] .calendar-picker,:root[data-contrast=true] .selected-session{background:#fff;border-color:var(--border)}:root[data-contrast=true] .calendar-date.outside-month{color:#344d41}:root[data-contrast=true] .calendar-date.has-session{border-bottom-color:#435858}:root[data-contrast=true] .calendar-date.selected{color:white;background:#003b35}
+@media(max-width:1050px){.calendar-layout{grid-template-columns:1fr}}
+@media(max-width:600px){.calendar-layout{gap:24px}.calendar-picker{padding:8px}.calendar-picker .calendar-grid{gap:0}.calendar-date{min-height:50px}.calendar-legend{padding:0 8px}.selected-session{padding:20px}.selected-day-empty{align-items:flex-start;padding:20px}.selected-day>h3{font-size:1.3em}.calendar-picker .month-header{margin-bottom:10px}}
+.calendar-picker .month-header h3,.selected-day>h3{text-transform:none}
