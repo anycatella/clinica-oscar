@@ -1,3 +1,4 @@
+import { pdfPageText } from '../domain/pdf-text';
 export async function extractDocument(file:File,onProgress:(n:number)=>void,signal?:AbortSignal):Promise<{text:string;method:'text'|'ocr'|'manual';warnings:string[]}>{
  const warnings:string[]=[];let text='';
  const check=()=>{if(signal?.aborted)throw new DOMException('Cancelado','AbortError');};check();
@@ -10,8 +11,9 @@ export async function extractDocument(file:File,onProgress:(n:number)=>void,sign
   try{
    for(let p=1;p<=pdf.numPages;p++){
     check();const page=await pdf.getPage(p);const content=await page.getTextContent();
-    let pageText='';for(const item of content.items){if('str' in item)pageText+=item.str+(item.hasEOL?'\n':' ');}
-    if(pageText.trim().length<15){usedOcr=true;worker??=await createOcrWorker();check();const viewport=page.getViewport({scale:1.8});const canvas=document.createElement('canvas');canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);const ctx=canvas.getContext('2d');if(!ctx)throw new Error('No canvas');await page.render({canvas,canvasContext:ctx,viewport}).promise;pageText=(await worker.recognize(canvas)).data.text;canvas.width=0;canvas.height=0;}
+    let pageText=pdfPageText(content.items);
+    const operators=await page.getOperatorList();const imagePage=operators.fnArray.some(op=>op===pdfjs.OPS.paintImageXObject||op===pdfjs.OPS.paintInlineImageXObject);
+    if(pageText.trim().length<15||(imagePage&&content.items.length<12)){usedOcr=true;worker??=await createOcrWorker();check();const viewport=page.getViewport({scale:1.8});const canvas=document.createElement('canvas');canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);const ctx=canvas.getContext('2d');if(!ctx)throw new Error('No canvas');await page.render({canvas,canvasContext:ctx,viewport}).promise;pageText=(await worker.recognize(canvas)).data.text;canvas.width=0;canvas.height=0;}
     text+=pageText+'\n';page.cleanup();onProgress(p/pdf.numPages);
    }
    return {text,method:usedOcr?'ocr':'text',warnings};

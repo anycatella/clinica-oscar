@@ -10,7 +10,7 @@ async function handle(request:Request){
  const s=services();if(!await authorize(request,s.keyHash))return json({error:'Abrí el enlace compartido de Clínica Oscar para acceder.'},401);
  const url=new URL(request.url),parts=url.pathname.split('/').filter(Boolean).slice(1);const [area,id,action]=parts;
  if(request.method==='GET'){
-  if(area==='records'){const [documents,sessions,stats]=await Promise.all([s.data.listDocumentPage({limit:20}),s.data.listSessions(),s.data.documentStats()]);return json({documents,sessions,summary:{...summarize([],sessions,localToday()),...stats,analysisCount:stats?.analysisCount??0,studyCount:stats?.studyCount??0}});}
+  if(area==='records'){const [documents,sessions,stats,latestDocuments]=await Promise.all([s.data.listDocumentPage({limit:20}),s.data.listSessions(),s.data.documentStats(),s.data.latestDocuments()]);return json({documents,sessions,latestDocuments,summary:{...summarize([],sessions,localToday()),...stats,analysisCount:stats?.analysisCount??0,studyCount:stats?.studyCount??0}});}
   if(area==='history')return json(await s.documents.listDocuments());
   if(area==='document-filters')return json(await s.data.filterOptions(url.searchParams.get('category')));
   if(area==='dashboard')return json(summarize(await s.documents.listDocuments(),await s.data.listSessions(),localToday()));
