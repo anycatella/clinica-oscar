@@ -1,0 +1,5 @@
+import {it,expect} from 'vitest';import fs from 'node:fs';import path from 'node:path';import {getDocument} from 'pdfjs-dist/legacy/build/pdf.mjs';import {pdfPageText} from '../lib/domain/pdf-text';import {parseReport} from '../lib/domain/parse-report';
+it.runIf(!!process.env.CLINICA_QA_FOLDER)('separates the actual laboratory, tomography, endoscopy and histology PDFs',async()=>{
+ for(const [file,category] of [['Laboratorio auad 14_5.pdf','analysis'],['tomografia de torax 14_5.pdf','study'],['video endoscopia digestiva baja 14_5.pdf','study'],['Recto SIGMOIDE. Lab Rodriguez.pdf','study']]){
+ const task=getDocument({data:new Uint8Array(fs.readFileSync(path.join(process.env.CLINICA_QA_FOLDER!,file))),useSystemFonts:true});const pdf=await task.promise;const pages:string[]=[];for(let p=1;p<=pdf.numPages;p++)pages.push(pdfPageText((await(await pdf.getPage(p)).getTextContent()).items));const data=parseReport(pages.join('\n'),file);expect(data.categorySuggestion,file).toBe(category);await task.destroy();}
+});
