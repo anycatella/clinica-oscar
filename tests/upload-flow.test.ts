@@ -10,3 +10,6 @@ describe('simple automatic upload',()=>{
  it('requests the medical date rather than replacing it with today',()=>{expect(canSaveAutomatically({...metadata,medicalDate:''},[])).toBe(false);expect(canSaveAutomatically({...metadata,medicalDate:'2026-02-30'},[])).toBe(false);});
  it('preserves an unsuccessful upload for retry instead of reporting success',async()=>{request.mockRejectedValue(Error('No pudimos guardar'));await expect(saveUpload(new File(['%PDF-1.7'],'prueba.pdf'),metadata)).rejects.toThrow('No pudimos guardar');});
 });
+
+import {reviewMetadata} from '../lib/domain/review-metadata';
+it('saves the date actually entered even when React still has an empty date',()=>{const fields=new FormData();fields.set('title','Análisis de laboratorio');fields.set('medicalDate','2026-10-09');const actual=reviewMetadata({...metadata,medicalDate:''},fields);expect(actual.medicalDate).toBe('2026-10-09');expect(actual.title).toBe(metadata.title);});
