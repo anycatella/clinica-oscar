@@ -10,7 +10,7 @@ import type { DocumentRecord, MeasurementRecord } from '../lib/domain/types';
 const statusLabels={low:'Bajo',normal:'Normal',high:'Alto',unknown:'Sin referencia'};
 export function ComparisonView({documents,onView}:{documents:DocumentRecord[];onView:(doc:DocumentRecord)=>void}){
  const [category,setCategory]=useState<'analysis'|'study'>('analysis'),[selectedDates,setDates]=useState<[string,string]>(['','']),[choices,setChoices]=useState<Record<string,string>>({}),[indicator,setIndicator]=useState(''),[originals,setOriginals]=useState<DocumentRecord[]>([]);
- const docs=documents.filter(d=>d.category===category&&d.processingStatus==='confirmed');const measurements=docs.flatMap(d=>d.measurements);const dates=[...new Set(docs.map(d=>d.medicalDate))].sort().reverse();
+ const docs=documents.filter(d=>!!d.medicalDate&&d.category===category&&d.processingStatus==='confirmed');const measurements=docs.flatMap(d=>d.measurements);const dates=[...new Set(docs.map(d=>d.medicalDate))].sort().reverse();
  const dateA=dates.includes(selectedDates[0])?selectedDates[0]:dates[1]??dates[0]??'',dateB=dates.includes(selectedDates[1])?selectedDates[1]:dates[0]??'';const orderedDates=[dateA,dateB].sort();
  const rows=compareDates(measurements,[dateA,dateB],choices);const groups=groupComparisons(measurements);const selected=groups.find(g=>g.key===indicator)??groups[0];
  const viewMeasurement=(m:MeasurementRecord)=>{const doc=docs.find(d=>d.id===m.documentId);if(doc)onView(doc);};

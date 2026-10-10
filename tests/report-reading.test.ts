@@ -9,3 +9,21 @@ describe('automatic document fields',()=>{
  it('reads report titles, conclusions and a one-sided reference',()=>{const report=parseReport('Centro Médico Ejemplo\nResonancia de abdomen\nFecha del estudio: 09/10/2026\nConclusión: Texto de prueba.');expect(report.title).toBe('Resonancia de abdomen');expect(report.categorySuggestion).toBe('study');expect(report.conclusions).toBe('Texto de prueba.');const lab=parseReport('Glucosa 105 mg/dL Menor a 100');expect(lab.measurements[0].referenceBounds?.upper).toBe(100);expect(lab.measurements[0].referenceBounds?.upperInclusive).toBe(false);});
  it('keeps numeric rows together when PDF text has no line-break hints',()=>{const item=(str:string,x:number,y:number)=>({str,transform:[1,0,0,1,x,y]});const text=pdfPageText([item('Glucosa',10,700),item('105',180,700),item('mg/dL',250,700),item('70 - 99',320,700),item('Hemoglobina',10,680),item('12',180,680),item('g/dL',250,680),item('11 - 16',320,680)]);expect(parseReport(text).measurements).toHaveLength(2);});
 });
+
+it('reads textual protocol dates and excludes birth and browser print dates',()=>{
+ const report=parseReport('7/10/26, 3:08 p.m.\nFecha Nacimiento: 17 NOV 1959\nFecha Protocolo: 27 MAY 2026 09:49\nGlucosa 96 mg/dL 70 - 99');
+ expect(report.medicalDateSuggestion).toBe('2026-05-27');
+});
+it('reads a date below its label and spaced numeric and short years',()=>{
+ expect(parseReport('Fecha de extracción:\n09 / 10 / 26\nFecha impresión: 10/10/2026').medicalDateSuggestion).toBe('2026-10-09');
+ expect(parseReport('Fecha del estudio: 9 de octubre de 2026').medicalDateSuggestion).toBe('2026-10-09');
+});
+it('preserves date field associations across PDF columns and wrapped labels',()=>{
+ const item=(str:string,x:number,y:number)=>({str,transform:[1,0,0,1,x,y]});
+ const report=parseReport(pdfPageText([item('Fecha',36,522),item('Nacimiento:',36,511),item('17 NOV 1959',98,517),item('Fecha',213,522),item('Protocolo:',213,511),item('27 MAY 2026 09:49',272,517)]));
+ expect(report.medicalDateSuggestion).toBe('2026-05-27');
+});
+it('does not extract patient identifiers or reference population rows as results',()=>{
+ const report=parseReport('Documento: 12345678\nAdultos: 150.000-450.000 /ul\nNiños: 150.000-500.000 /ul\nHombres....... 0,70-1,20\nNivel Alto: 240\nGlucosa 96 mg/dL 70 - 99\nCA 19.9 8,2 U/mL Menor a 37');
+ expect(report.measurements.map(x=>x.indicatorName)).toEqual(['Glucosa','CA 19.9']);expect(report.measurements[1].numericValue).toBe(8.2);
+});

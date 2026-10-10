@@ -38,3 +38,10 @@ describe('shared original documents',()=>{
 });
 it('replacement cleanup survives restart and retries',async()=>{const {document:a}=await service.saveDocument(file(),metadata);files.failDelete=true;const result=await service.replaceDocument(a.id,1,file('new.pdf','%PDF-1.7\nNuevo'),metadata);expect(result.cleanupPending).toBe(true);expect((await service.getDocument(a.id)).pendingFileKeys).toEqual([a.fileKey]);files.failDelete=false;await service.listDocuments();expect(files.objects.size).toBe(1);expect((await service.getDocument(a.id)).pendingFileKeys).toEqual([]);});
 it('paginates in SQL with date cursor',async()=>{const data=new SqlDataService(sqliteBinding() as never);const docs=new DocumentService(data,files);const a=await docs.saveDocument(file(),metadata);await docs.saveDocument(file('b.pdf','%PDF-1.7\nB'),{...metadata,medicalDate:'2026-05-01'});expect(await data.listDocumentPage({limit:1})).toHaveLength(1);expect((await data.listDocumentPage({limit:2,before:`${a.document.medicalDate}:${a.document.id}`}))[0].medicalDate).toBe('2026-05-01');});
+it('stores an original without a detected date and allows completing it later',async()=>{
+ const saved=await service.saveDocument(file('sin-fecha.pdf','%PDF-1.7\nFecha no legible'),{...metadata,medicalDate:''});
+ expect(await service.getFile(saved.document.id)).toBeTruthy();
+ expect((await service.listDocuments())[0].medicalDate).toBe('');
+ const updated=await service.updateDocument(saved.document.id,saved.document.version,metadata);
+ expect(updated.medicalDate).toBe(metadata.medicalDate);
+});

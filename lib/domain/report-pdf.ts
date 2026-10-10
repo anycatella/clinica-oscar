@@ -13,7 +13,7 @@ export function buildReportPdf(record:DocumentRecord):Uint8Array{
  const finish=()=>{y=30;text(`Resumen automático · ${pages.length+1}`,40,9);pages.push(commands);commands='';};
  const ensure=(height:number)=>{if(y-height<70){finish();header();}};
  const paragraph=(value:string,size=11,bold=false)=>{for(const line of wrap(value,size>=16?50:90)){ensure(size+6);text(line,40,size,bold);y-=size+6;}y-=8;};
- header();paragraph(record.title,18,true);paragraph(`${formatDate(record.medicalDate)} · ${record.category==='analysis'?'Análisis':'Estudio'}`);if(record.institution)paragraph(record.institution);
+ header();paragraph(record.title,18,true);paragraph(`${(record.medicalDate?formatDate(record.medicalDate):'Fecha pendiente')} · ${record.category==='analysis'?'Análisis':'Estudio'}`);if(record.institution)paragraph(record.institution);
  if(record.measurements.length){
   const tableHeader=()=>{ensure(35);commands+=`0.93 0.96 0.98 rg 40 ${y-9} 515 26 re f\n`;text('Indicador',45,10,true);text('Resultado',235,10,true);text('Referencia',350,10,true);text('Estado',480,10,true);y-=32;};tableHeader();
   for(const m of record.measurements){const a=wrap(m.indicatorName,30),b=wrap(`${m.rawValue} ${m.unit??''}`,18),c=wrap(m.referenceText??'No informada',20),status=referenceStatus(m),d=wrap(labels[status],12);const height=Math.max(a.length,b.length,c.length,d.length)*15+12;if(y-height<70){finish();header();tableHeader();}const top=y;for(let line=0;line<Math.max(a.length,b.length,c.length,d.length);line++){y=top-line*15;if(a[line])text(a[line],45,10,true);if(b[line])text(b[line],235,10,true,colors[status]);if(c[line])text(c[line],350,10);if(d[line])text(d[line],480,10,false,colors[status]);}y=top-height;commands+=`0.82 0.88 0.92 RG 40 ${y+4} m 555 ${y+4} l S\n`;}
