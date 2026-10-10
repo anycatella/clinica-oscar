@@ -15,3 +15,9 @@ Fecha: 9 de octubre de 2026.
 La versión alojada en Sites admite únicamente documentos sintéticos o efectivamente anonimizados. No usar con datos médicos identificables. La instalación en dispositivos físicos iOS/Android no se ha probado; se incluyen manifiesto, iconos, service worker, instalación cuando el navegador la ofrece e instrucciones para añadir a pantalla de inicio. Los originales y respuestas de API no se guardan en caché offline.
 
 La biblioteca utiliza consultas paginadas. La historia completa se consulta por separado cuando se abre Comparativas. No se convierten unidades ni se interpretan diagnósticos. “Normal” depende del rango del documento más reciente elegido.
+
+## Actualización de uso personal y diseño — 9 de octubre de 2026
+
+El usuario aclaró uso personal de Oscar y acceso por enlace para sus médicos. La modalidad está documentada en personal-use.md; reemplaza la limitación inicial de pruebas para documentos personales fuera del uso HIPAA. Se requiere declaración de autorización antes de elegir el archivo y en la API; se informa acceso de lectura, descarga y modificación para todos los portadores del enlace. No se migraron registros desde otras apps ni se usaron documentos reales en las verificaciones.
+
+Interfaz renovada con marfil, verde profundo, detalles dorados y títulos serif; conserva controles de texto de 18/22/26 px y alto contraste. Carga con pasos explícitos, nombre y progreso, fecha identificada como la del documento y botón Guardar documento. La verificación visual local a 390 px mostró ancho de contenido de 390 px. Pruebas de dominio y almacenamiento: 46 aprobadas. Typecheck y lint sin errores; build de producción completado. La instalación usa caché temporal propia porque la caché global contenía una carpeta sin permiso de escritura.

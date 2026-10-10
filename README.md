@@ -1,10 +1,10 @@
 # Clínica Oscar
 
-Aplicación web para organizar documentos de prueba anonimizados de un paciente: historial por fecha médica, originales descargables, lectura de PDF e imágenes con OCR local, revisión y edición, comparación de dos fechas, evolución con tabla y gráfico, calendario de quimioterapia y PWA.
+Aplicación web para organizar documentos personales de Oscar: historial por fecha médica, originales descargables, lectura de PDF e imágenes con OCR local, revisión y edición, comparación de dos fechas, evolución con tabla y gráfico, calendario de quimioterapia y PWA.
 
 ## Alcance de esta versión
 
-Esta versión en ChatGPT Sites es para documentos sintéticos o efectivamente anonimizados. No admite información médica identificable. Sites prohíbe procesar PHI; no usar este despliegue como historia clínica real del paciente. Consulta las [condiciones de Sites](https://openai.com/policies/chatgpt-sites-terms/).
+Uso personal bajo control del usuario, con autorización del titular para guardar y compartir sus documentos. Admite PDF, JPG y PNG personales; no admite PHI sujeto a HIPAA ni se ofrece como servicio HIPAA. Las [condiciones de Sites](https://openai.com/policies/chatgpt-sites-terms/) distinguen PHI de otros datos sensibles. [HHS](https://www.hhs.gov/hipaa/for-professionals/privacy/guidance/cell-phone-hipaa/index.html) distingue aplicaciones personales de las ofrecidas por entidades cubiertas. Esta configuración sigue el uso personal declarado por el usuario; no acredita cumplimiento legal general. Todos los portadores del enlace pueden consultar, descargar, editar y eliminar registros. No publicar el enlace en el repositorio.
 
 La app empieza vacía. Los valores no son diagnósticos ni recomendaciones: Bajo/Normal/Alto usa solo rangos revisados de cada documento. Subió/Bajó muestra la dirección del cambio entre fechas. No incluye funciones de voz ni múltiples pacientes.
 

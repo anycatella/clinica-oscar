@@ -6,7 +6,8 @@ const assert=(ok,label)=>{if(!ok)throw new Error(label);console.log('PASS '+labe
 assert((await fetch(config.base+'/api/records')).status===401,'sin enlace no hay acceso');
 const bytes=await readFile(new URL('../tests/fixtures/analysis-old.pdf',import.meta.url));
 const metadata={title:'Verificación sintética',category:'analysis',medicalDate:'2026-05-01',institution:null,subcategory:null,summary:null,conclusions:null,extractionConfidence:{},measurements:[]};
-const upload=async()=>{const f=new FormData();f.set('file',new File([bytes],'verificacion-sintetica.pdf',{type:'application/pdf'}));f.set('metadata',JSON.stringify(metadata));f.set('testDocumentConfirmed','true');return request('/api/documents',{method:'POST',body:f});};
+const upload=async(confirmed=true)=>{const f=new FormData();f.set('file',new File([bytes],'verificacion-sintetica.pdf',{type:'application/pdf'}));f.set('metadata',JSON.stringify(metadata));if(confirmed)f.set('personalUseConfirmed','true');return request('/api/documents',{method:'POST',body:f});};
+assert((await upload(false)).status===400,'sin autorización declarada no se guarda');
 let doc,created=false;
 try{
  const first=await upload();assert(first.ok,'carga original');const a=await first.json();doc=a.document;created=!a.duplicate;

@@ -27,7 +27,7 @@ async function handle(request:Request){
  }
  if(request.method==='POST'&&area==='documents'){
   if(Number(request.headers.get('Content-Length')??0)>27*1024*1024)throw new AppError('El archivo puede pesar hasta 25 MB.');
-  const form=await request.formData(),file=form.get('file');if(!(file instanceof File))throw new AppError('Seleccioná un archivo.');if(form.get('testDocumentConfirmed')!=='true')throw new AppError('Solo se admiten documentos de prueba sin información identificable en esta versión.');
+  const form=await request.formData(),file=form.get('file');if(!(file instanceof File))throw new AppError('Seleccioná un archivo.');if(form.get('personalUseConfirmed')!=='true')throw new AppError('Confirmá que tenés autorización para guardar y compartir estos documentos personales.');
   let metadata;try{metadata=JSON.parse(String(form.get('metadata')));}catch{throw new AppError('Revisá los datos del documento.');}
   if(id&&action==='replacement')return json(await s.documents.replaceDocument(id,Number(form.get('expectedVersion')),file,metadata));
   if(!id){const result=await s.documents.saveDocument(file,metadata);return json(result,result.duplicate?200:201);}
