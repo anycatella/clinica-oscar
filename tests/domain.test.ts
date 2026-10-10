@@ -6,6 +6,17 @@ import type { MeasurementRecord, DocumentRecord, SessionRecord } from '../lib/do
 const measure=(value:number,date:string,extra:Partial<MeasurementRecord>={}):MeasurementRecord=>({id:`${date}-${value}`,documentId:date,medicalDate:date,indicatorName:'Glucosa',normalizedName:'glucosa',kind:'numeric',rawValue:String(value),numericValue:value,operator:'=',unit:'mg/dL',referenceText:'70–99',referenceBounds:{lower:70,upper:99,lowerInclusive:true,upperInclusive:true},reviewed:true,...extra});
 describe('two-date comparisons',()=>{
  it('reports down and normal using later reference',()=>{const r=compareDates([measure(105,'2026-01-01'),measure(96,'2026-02-01')],['2026-02-01','2026-01-01'],{});expect(r[0].direction).toBe('down');expect(r[0].normal).toBe(true);expect(r[0].earlier?.numericValue).toBe(105);});
+ it('keeps the most recent laboratory order and appends older-only indicators',()=>{
+ const named=(name:string,date:string)=>measure(90,date,{id:date+name,indicatorName:name,normalizedName:null});
+ const rows=[named('Glucosa','2026-01-01'),named('Urea','2026-01-01'),named('Hemoglobina','2026-01-01'),named('Hemoglobina','2026-02-01'),named('Glucosa','2026-02-01')];
+ expect(compareDates(rows,['2026-01-01','2026-02-01'],{}).map(r=>r.label)).toEqual(['Hemoglobina','Glucosa','Urea']);
+ expect(groupComparisons(rows).map(r=>r.label)).toEqual(['Hemoglobina','Glucosa','Urea']);
+ });
+ it('uses the selected dates rather than a third report to determine order',()=>{
+ const named=(name:string,date:string)=>measure(90,date,{id:date+name,indicatorName:name,normalizedName:null});
+ const rows=[named('Glucosa','2026-03-01'),named('Hemoglobina','2026-03-01'),named('Hemoglobina','2026-02-01'),named('Glucosa','2026-02-01'),named('Glucosa','2026-01-01')];
+ expect(compareDates(rows,['2026-02-01','2026-01-01'],{}).map(r=>r.label)).toEqual(['Hemoglobina','Glucosa']);
+ });
  it('reports up',()=>expect(compareDates([measure(90,'2026-01-01'),measure(105,'2026-02-01')],['2026-01-01','2026-02-01'],{})[0].direction).toBe('up'));
  it('equal outside reference is unchanged and not normal',()=>{const r=compareDates([measure(105,'2026-01-01'),measure(105,'2026-02-01')],['2026-01-01','2026-02-01'],{})[0];expect(r.direction).toBe('unchanged');expect(r.normal).toBe(false);});
  it('does not borrow an older reference',()=>{const r=compareDates([measure(90,'2026-01-01'),measure(95,'2026-02-01',{referenceText:null,referenceBounds:null})],['2026-01-01','2026-02-01'],{})[0];expect(r.currentReference).toBe(null);expect(r.normal).toBe(null);});

@@ -1,8 +1,9 @@
 import type { MeasurementRecord, MeasurementInput, ComparisonRow } from './types';
 export function groupComparisons(rows:MeasurementRecord[]){
  const groups=new Map<string,{key:string;label:string;unit:string|null;rows:MeasurementRecord[]}>();
- for(const row of rows){if(!row.reviewed)continue;const name=row.normalizedName||row.indicatorName.trim().toLowerCase();const key=JSON.stringify([name,row.unit??'']);const g=groups.get(key)??{key,label:row.normalizedName?row.normalizedName.toUpperCase():row.indicatorName,unit:row.unit,rows:[]};g.rows.push(row);groups.set(key,g);}
- return [...groups.values()].map(g=>({...g,rows:g.rows.sort((a,b)=>b.medicalDate.localeCompare(a.medicalDate))})).sort((a,b)=>a.label.localeCompare(b.label,'es'));
+ // Stable date ordering preserves each institution's original result sequence.
+ for(const row of [...rows].sort((a,b)=>b.medicalDate.localeCompare(a.medicalDate))){if(!row.reviewed)continue;const name=row.normalizedName||row.indicatorName.trim().toLowerCase();const key=JSON.stringify([name,row.unit??'']);const g=groups.get(key)??{key,label:row.indicatorName,unit:row.unit,rows:[]};g.rows.push(row);groups.set(key,g);}
+ return [...groups.values()].map(g=>({...g,rows:g.rows.sort((a,b)=>b.medicalDate.localeCompare(a.medicalDate))}));
 }
 export function referenceStatus(row:MeasurementInput):'low'|'normal'|'high'|'unknown'{
  const b=row.referenceBounds,n=row.numericValue;
