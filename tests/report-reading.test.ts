@@ -27,3 +27,8 @@ it('does not extract patient identifiers or reference population rows as results
  const report=parseReport('Documento: 12345678\nAdultos: 150.000-450.000 /ul\nNiños: 150.000-500.000 /ul\nHombres....... 0,70-1,20\nNivel Alto: 240\nGlucosa 96 mg/dL 70 - 99\nCA 19.9 8,2 U/mL Menor a 37');
  expect(report.measurements.map(x=>x.indicatorName)).toEqual(['Glucosa','CA 19.9']);expect(report.measurements[1].numericValue).toBe(8.2);
 });
+it('keeps adult male references instead of applying female or child ranges',()=>{
+ const report=parseReport('Sexo: M\nEdad: 66 años\nCreatinina 1,07 mg/dl Mujeres: 0,52 - 1,04 mg/dl\nHombres: 0,66 - 1,25 mg/dl\nPlaquetas 213000 / ul Neonatos: 150000 - 553000 /ul\nNiños: 150000 - 500000 /ul\nAdultos: 150000 - 450000 /ul');
+ expect(report.measurements[0].referenceBounds?.upper).toBe(1.25);expect(report.measurements[1].unit).toBe('/ul');expect(report.measurements[1].referenceBounds?.upper).toBe(450000);
+});
+it('does not assign a demographic-specific range without a matching patient context',()=>{expect(parseReport('Creatinina 1,07 mg/dl Mujeres: 0,52 - 1,04 mg/dl\nHombres: 0,66 - 1,25 mg/dl').measurements[0].referenceBounds).toBeNull();});

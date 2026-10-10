@@ -6,7 +6,7 @@ export function reportNumber(raw:string):number{
  if(/^-?\d{1,3}(?:\.\d{3})+$/.test(clean))return Number(clean.replace(/\./g,''));
  return Number(clean.replace(',','.'));
 }
-function bounds(ref:string|null):ReferenceBounds|null{
+export function referenceBounds(ref:string|null):ReferenceBounds|null{
  if(!ref)return null;
  const range=new RegExp(`(${numeric})\\s*(?:-|–|—|a|hasta)\\s*(${numeric})`,'i').exec(ref);
  if(range)return {lower:reportNumber(range[1]),upper:reportNumber(range[2]),lowerInclusive:true,upperInclusive:true};
@@ -30,23 +30,39 @@ export function laboratoryMeasurements(text:string):MeasurementInput[]{
   }
   rows.push(row);
  }
+ const sex=/\bsexo\s*:\s*(masculino|femenino|[mf])\b/i.exec(text)?.[1]?.toLowerCase();
+ const ageMatch=/\bedad\s*:\s*(\d{1,3})\s*(?:años|a[nñ]os)?/i.exec(text);const age=ageMatch?Number(ageMatch[1]):null;
  const measurements:MeasurementInput[]=[];
  for(const row of rows){
-  const m=new RegExp(`^\\s*(CA\\s*\\d{1,3}(?:[.-]\\d{1,2})?|[A-Za-zÁÉÍÓÚÜÑáéíóúüñ][A-Za-z0-9ÁÉÍÓÚÜÑáéíóúüñ\\s()\\-./]{0,70}?)\\s*[:\\t ]+([<>]=?)?\\s*(${numeric})(.*)$`).exec(row);
+  if((referencePopulation.test(row)||/^(?:[<>]\s*)?\d+(?:\s*(?:-|a)\s*\d+)?\s*(?:años|meses)\b/i.test(row))&&measurements.length){
+   const previous=measurements.at(-1)!;previous.referenceText=[previous.referenceText,row].filter(Boolean).join('\n');continue;
+  }
+  const m=new RegExp(`^\\s*(CA\\s*\\d{1,3}(?:[.-]\\d{1,2})?|[A-Za-zÁÉÍÓÚÜÑáéíóúüñ][A-Za-z0-9ÁÉÍÓÚÜÑáéíóúüñ\\s()\\-./]{0,70}?)\\s*[:\\t ]+([<>]=?)?\\s*(${numeric}[.,]?)(.*)$`).exec(row);
   if(m&&!ignored(m[1])){
    let tail=m[4].trim().replace(/^[*↑↓]+\s*/,'');let unit:string|null=null;
    if(unitPattern.test(tail)){
-    const u=/^(?:x\s*10\^?\d+\s*\/\s*\w+|[^\s\t]+)(?:\s*\/\s*[a-zA-Zµμ0-9]+)?/.exec(tail);
+    const u=/^(?:\/\s*[^\s\t]+|mm\s+de\s+Hg|x\s*10\^?\d+\s*\/\s*\w+|[^\s\t]+)(?:\s*\/\s*[a-zA-Zµμ0-9]+)?/.exec(tail);
     if(u){unit=u[0].replace(/\s/g,'');tail=tail.slice(u[0].length).trim();}
    }
    // Avoid treating a date or a report identifier as a result.
    if(!unit&&/^[/.]\d/.test(tail))continue;
    const referenceText=tail.replace(/^(?:valor(?:es)?\s+de\s+referencia|referencia)\s*:?\s*/i,'')||null;
-   measurements.push({indicatorName:m[1].trim(),normalizedName:null,kind:'numeric',rawValue:(m[2]??'')+m[3],numericValue:reportNumber(m[3]),operator:(m[2]??'=') as MeasurementInput['operator'],unit,referenceText,referenceBounds:bounds(referenceText)});
+   measurements.push({indicatorName:m[1].trim(),normalizedName:null,kind:'numeric',rawValue:(m[2]??'')+m[3],numericValue:reportNumber(m[3]),operator:(m[2]??'=') as MeasurementInput['operator'],unit,referenceText,referenceBounds:referenceBounds(referenceText)});
    continue;
   }
   const q=/^([A-Za-zÁÉÍÓÚÜÑáéíóúüñ][A-Za-z0-9ÁÉÍÓÚÜÑáéíóúüñ ()/.-]{0,70}?)\s*[:\t ]+((?:no\s+detectable|no\s+reactivo|negativo|positivo|reactivo|ausente|presente|normal|escasos|abundantes)\b.*)$/i.exec(row);
   if(q&&!ignored(q[1]))measurements.push({indicatorName:q[1].trim(),normalizedName:null,kind:'text',rawValue:q[2].trim(),numericValue:null,operator:null,unit:null,referenceText:null,referenceBounds:null});
+ }
+ for(const m of measurements){
+  const ref=m.referenceText;if(!ref)continue;
+  const demographic=/mujeres|hombres|varones|adultos|niños|niñas|neonatos|embarazadas|años|meses|fumadores|nivel /i.test(ref);
+  if(!demographic)continue;
+  const parts=ref.split('\n');let selected:string|undefined;
+  if(sex)selected=parts.find(part=>(/^(?:m|masculino)$/.test(sex)?/hombres|varones/i:/mujeres/i).test(part)&&referenceBounds(part));
+  if(!selected&&age!==null&&age>=20)selected=parts.find(part=>/adultos/i.test(part)&&referenceBounds(part));
+  // A population or risk category is not automatically the patient's applicable range.
+  m.referenceBounds=selected?referenceBounds(selected):null;
+  if(selected)m.referenceText=selected;
  }
  return measurements;
 }
