@@ -5,6 +5,7 @@ export interface DataService{
  findByHash(hash:string):Promise<{record:DocumentRecord;state:string}|null>;
  claimDocument(record:DocumentRecord):Promise<boolean>;
  activateDocument(id:string):Promise<void>;
+ clearPendingFiles(id:string,version:number):Promise<void>;
  updateDocument(record:DocumentRecord,expectedVersion:number,hash?:string):Promise<boolean>;
  removeDocument(id:string,expectedVersion?:number):Promise<boolean>;
  listSessions():Promise<SessionRecord[]>;

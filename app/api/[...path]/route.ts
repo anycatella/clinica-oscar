@@ -10,7 +10,9 @@ async function handle(request:Request){
  const s=services();if(!await authorize(request,s.keyHash))return json({error:'Abrí el enlace compartido de Clínica Oscar para acceder.'},401);
  const url=new URL(request.url),parts=url.pathname.split('/').filter(Boolean).slice(1);const [area,id,action]=parts;
  if(request.method==='GET'){
-  if(area==='records'){const [documents,sessions]=await Promise.all([s.documents.listDocuments(),s.data.listSessions()]);return json({documents,sessions,summary:summarize(documents,sessions,localToday())});}
+  if(area==='records'){const [documents,sessions,stats]=await Promise.all([s.data.listDocumentPage({limit:20}),s.data.listSessions(),s.data.documentStats()]);return json({documents,sessions,summary:{...summarize([],sessions,localToday()),...stats,analysisCount:stats?.analysisCount??0,studyCount:stats?.studyCount??0}});}
+  if(area==='history')return json(await s.documents.listDocuments());
+  if(area==='document-filters')return json(await s.data.filterOptions(url.searchParams.get('category')));
   if(area==='dashboard')return json(summarize(await s.documents.listDocuments(),await s.data.listSessions(),localToday()));
   if(area==='sessions')return json(await s.data.listSessions());
   if(area==='measurements'){const docs=await s.documents.listDocuments();return json(docs.filter(d=>d.processingStatus==='confirmed'&&(!url.searchParams.get('category')||d.category===url.searchParams.get('category'))).flatMap(d=>d.measurements));}
@@ -20,8 +22,7 @@ async function handle(request:Request){
   }
   if(area==='documents'&&id)return json(await s.documents.getDocument(id));
   if(area==='documents'){
-   let list=await s.documents.listDocuments();const category=url.searchParams.get('category'),q=url.searchParams.get('q')?.toLowerCase();if(category)list=list.filter(d=>d.category===category);if(q)list=list.filter(d=>[d.title,d.subcategory,d.institution,d.medicalDate,...d.measurements.map(m=>m.indicatorName)].join(' ').toLowerCase().includes(q));
-   const before=url.searchParams.get('before');if(before)list=list.filter(d=>`${d.medicalDate}:${d.id}`<before);const limit=Math.max(1,Math.min(100,Number(url.searchParams.get('limit'))||20));const items=list.slice(0,limit);return json({items,nextCursor:list.length>limit?`${items.at(-1)!.medicalDate}:${items.at(-1)!.id}`:null});
+   const limit=Math.max(1,Math.min(100,Number(url.searchParams.get('limit'))||20));const list=await s.data.listDocumentPage({limit:limit+1,before:url.searchParams.get('before'),category:url.searchParams.get('category'),q:url.searchParams.get('q'),from:url.searchParams.get('from'),until:url.searchParams.get('until'),year:url.searchParams.get('year'),subcategory:url.searchParams.get('subcategory')});const items=list.slice(0,limit);await Promise.all(items.filter(d=>d.pendingFileKeys?.length).map(d=>s.documents.cleanup(d)));return json({items,nextCursor:list.length>limit?`${items.at(-1)!.medicalDate}:${items.at(-1)!.id}`:null});
   }
  }
  if(request.method==='POST'&&area==='documents'){

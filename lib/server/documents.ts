@@ -8,7 +8,8 @@ async function fileBytes(file:File){if(!file.size||file.size>25*1024*1024)throw 
 function withMeasurements(metadata:DocumentMetadata,id:string){return metadata.measurements.map(m=>({...m,id:crypto.randomUUID(),documentId:id,medicalDate:metadata.medicalDate,reviewed:true}));}
 export class DocumentService{
  constructor(private data:DataService,private files:FileStorageService){}
- listDocuments(){return this.data.listDocuments();}
+ async listDocuments(){const records=await this.data.listDocuments();await Promise.all(records.filter(r=>r.pendingFileKeys?.length).map(r=>this.cleanup(r)));return this.data.listDocuments();}
+ async cleanup(r:DocumentRecord){try{for(const key of r.pendingFileKeys??[])await this.files.remove(key);await this.data.clearPendingFiles(r.id,r.version);r.pendingFileKeys=[];return true;}catch{return false;}}
  async saveDocument(file:File,input:DocumentMetadata){const metadata=validateMetadata(input);const {bytes,mime,hash}=await fileBytes(file);const existing=await this.data.findByHash(hash);if(existing){if(existing.state!=='confirmed')throw new AppError('Este archivo se está procesando. Intentá nuevamente en unos segundos.',409);return {document:existing.record,duplicate:true};}
  const id=crypto.randomUUID(),now=new Date().toISOString();const record:DocumentRecord={...metadata,measurements:withMeasurements(metadata,id),id,originalName:file.name.slice(0,240),mime,size:file.size,sha256:hash,fileKey:`originals/${id}`,uploadedAt:now,updatedAt:now,version:1,reviewStatus:'confirmed',processingStatus:'confirmed'};
  if(!await this.data.claimDocument(record)){const concurrent=await this.data.findByHash(hash);if(concurrent?.state==='confirmed')return {document:concurrent.record,duplicate:true};throw new AppError('Este archivo se está cargando desde otra ventana. Reintentá en unos segundos.',409);}
@@ -18,12 +19,12 @@ export class DocumentService{
  async getFile(id:string){const r=await this.getDocument(id);const bytes=await this.files.get(r.fileKey);if(!bytes)throw new AppError('El original no está disponible. Intentá nuevamente.',404);return bytes;}
  async updateDocument(id:string,version:number,input:DocumentMetadata){const metadata=validateMetadata(input);const current=await this.getDocument(id);this.checkVersion(current,version);if(current.processingStatus==='deletion-pending')throw new AppError('La eliminación de este documento está pendiente.',409);const next={...current,...metadata,measurements:withMeasurements(metadata,id),version:current.version+1,updatedAt:new Date().toISOString()};if(!await this.data.updateDocument(next,version))throw this.conflict();return next;}
  async deleteDocument(id:string,version:number){let current=await this.getDocument(id);this.checkVersion(current,version);if(current.processingStatus!=='deletion-pending'){const pending={...current,processingStatus:'deletion-pending' as const,version:version+1,updatedAt:new Date().toISOString()};if(!await this.data.updateDocument(pending,version))throw this.conflict();current=pending;}
- await this.files.remove(current.fileKey);if(!await this.data.removeDocument(id,current.version))throw this.conflict();return true;}
+ for(const key of [...(current.pendingFileKeys??[]),current.fileKey])await this.files.remove(key);if(!await this.data.removeDocument(id,current.version))throw this.conflict();return true;}
  async replaceDocument(id:string,version:number,file:File,input:DocumentMetadata){const metadata=validateMetadata(input);const current=await this.getDocument(id);this.checkVersion(current,version);if(current.processingStatus!=='confirmed')throw new AppError('La eliminación de este documento está pendiente.',409);const {bytes,mime,hash}=await fileBytes(file);const duplicate=await this.data.findByHash(hash);if(duplicate&&duplicate.record.id!==id)throw new AppError('Ese original ya está guardado en otro documento.',409);
  const fileKey=`originals/${id}/${crypto.randomUUID()}`;await this.files.put(fileKey,bytes,mime);
- const next:DocumentRecord={...current,...metadata,measurements:withMeasurements(metadata,id),originalName:file.name.slice(0,240),mime,size:file.size,sha256:hash,fileKey,version:version+1,updatedAt:new Date().toISOString()};
+ const next:DocumentRecord={...current,...metadata,measurements:withMeasurements(metadata,id),originalName:file.name.slice(0,240),mime,size:file.size,sha256:hash,fileKey,pendingFileKeys:[...(current.pendingFileKeys??[]),current.fileKey],version:version+1,updatedAt:new Date().toISOString()};
  try{if(!await this.data.updateDocument(next,version))throw this.conflict();}catch(error){await this.files.remove(fileKey).catch(()=>{});throw error;}
- try{await this.files.remove(current.fileKey);}catch{return {document:next,cleanupPending:true};}return {document:next,cleanupPending:false};}
+ const cleaned=await this.cleanup(next);return {document:next,cleanupPending:!cleaned};}
  private checkVersion(r:DocumentRecord,version:number){if(!Number.isInteger(version)||version!==r.version)throw this.conflict();}
  private conflict(){return new AppError('El documento cambió por otra persona. Revisá la versión actual antes de guardar.',409);}
 }

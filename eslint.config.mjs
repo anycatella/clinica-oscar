@@ -12,7 +12,12 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "public/ocr/**",
+    "public/pdf/**",
+    "dist/**",
+    ".wrangler/**",
   ]),
+  {files:["components/document-review.tsx","components/document-viewer.tsx"],rules:{"@next/next/no-img-element":"off"}}, // Blob originals stay local and retain their bytes; no image optimizer.
   {
     files: ["components/ui/**/*.{ts,tsx}", "hooks/use-mobile.ts"],
     rules: {
