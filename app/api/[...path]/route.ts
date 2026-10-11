@@ -32,6 +32,7 @@ async function handle(request:Request){
   if(id&&action==='replacement')return json(await s.documents.replaceDocument(id,Number(form.get('expectedVersion')),file,metadata));
   if(!id){const result=await s.documents.saveDocument(file,metadata);return json(result,result.duplicate?200:201);}
  }
+ if(request.method==='PATCH'&&area==='documents'&&id&&action==='units'){const body=await request.json() as {expectedVersion:number;actions:unknown};return json(await s.documents.normalizeUnits(id,body.expectedVersion,body.actions));}
  if(request.method==='PATCH'&&area==='documents'&&id){const body=await request.json() as {expectedVersion:number;metadata:unknown};return json(await s.documents.updateDocument(id,body.expectedVersion,body.metadata as never));}
  if(request.method==='DELETE'&&area==='documents'&&id){const body=await request.json() as {expectedVersion:number;confirmed:boolean};if(body.confirmed!==true)throw new AppError('Confirmá la eliminación del documento.');await s.documents.deleteDocument(id,body.expectedVersion);return json({deleted:true});}
  if((request.method==='POST'||request.method==='PATCH')&&area==='sessions'){

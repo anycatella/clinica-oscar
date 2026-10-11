@@ -45,3 +45,25 @@ it('stores an original without a detected date and allows completing it later',a
  const updated=await service.updateDocument(saved.document.id,saved.document.version,metadata);
  expect(updated.medicalDate).toBe(metadata.medicalDate);
 });
+it('normalization preview/apply and undo retain files, results and source units',async()=>{
+ const measurements=[{indicatorName:'Creatinina',normalizedName:null,kind:'numeric' as const,rawValue:'0,94',numericValue:.94,operator:'=' as const,unit:'mgj/dl',referenceText:'0,66 - 1,25 mg/dl',referenceBounds:null},{indicatorName:'VCM',normalizedName:null,kind:'numeric' as const,rawValue:'80',numericValue:80,operator:'=' as const,unit:'fl',referenceText:null,referenceBounds:null}];
+ const {document}=await service.saveDocument(file(),{...metadata,measurements});
+ const first=document.measurements[0],safe=document.measurements[1];
+ await expect(service.normalizeUnits(document.id,document.version,[{measurementId:first.id,mode:'format'}])).rejects.toThrow();
+ const normalized=await service.normalizeUnits(document.id,document.version,[{measurementId:safe.id,mode:'format'}]);
+ expect(normalized.measurements.map(m=>m.id)).toEqual(document.measurements.map(m=>m.id));
+ expect(normalized.measurements[0].unit).toBe('mgj/dl');expect(normalized.measurements[1].normalizedUnit).toBe('fL');
+ const confirmed=await service.normalizeUnits(document.id,normalized.version,[{measurementId:first.id,mode:'confirm',unit:'mg/dL'}]);
+ expect(confirmed.measurements[0].normalizedUnit).toBe('mg/dL');expect(confirmed.measurements[0].originalUnit).toBe('mgj/dl');
+ await expect(service.normalizeUnits(document.id,document.version,[{measurementId:first.id,mode:'revert'}])).rejects.toThrow('otra persona');
+ const reverted=await service.normalizeUnits(document.id,confirmed.version,[{measurementId:first.id,mode:'revert'}]);
+ expect(reverted.measurements[0].normalizedUnit).toBeNull();expect(reverted.measurements).toHaveLength(2);expect(reverted.sha256).toBe(document.sha256);expect(await service.getFile(document.id)).toBeTruthy();
+});
+it('editing a confirmed unit creates reversible history and preserves result identity',async()=>{
+ const input={indicatorName:'Creatinina',normalizedName:null,kind:'numeric' as const,rawValue:'0,94',numericValue:.94,operator:'=' as const,unit:'mgj/dl',referenceText:null,referenceBounds:null};
+ const {document}=await service.saveDocument(file(),{...metadata,measurements:[input],conclusions:'Conclusión conservada.'});
+ const old=document.measurements[0];
+ const updated=await service.updateDocument(document.id,document.version,{...document,measurements:[{...old,normalizedUnit:'mg/dL',unitStatus:'confirmed'}]});
+ expect(updated.measurements[0].id).toBe(old.id);expect(updated.measurements[0].unit).toBe('mgj/dl');expect(updated.measurements[0].unitCorrections).toHaveLength(1);
+ const undo=await service.normalizeUnits(updated.id,updated.version,[{measurementId:old.id,mode:'revert'}]);expect(undo.measurements[0].normalizedUnit).toBeNull();expect(undo.conclusions).toBe('Conclusión conservada.');
+});

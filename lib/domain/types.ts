@@ -1,7 +1,9 @@
 export type DocumentCategory='analysis'|'study';
 export type Confidence='high'|'medium'|'low';
 export type ReferenceBounds={lower:number|null;upper:number|null;lowerInclusive:boolean;upperInclusive:boolean};
-export type MeasurementInput={indicatorName:string;normalizedName:string|null;kind:'numeric'|'text';rawValue:string;numericValue:number|null;operator:'='|'<'|'>'|'<='|'>='|null;unit:string|null;referenceText:string|null;referenceBounds:ReferenceBounds|null};
+export type UnitState={normalizedUnit:string|null;unitStatus:'format'|'confirmed'|'unresolved'};
+export type UnitCorrection={id:string;at:string;reason:'format'|'confirmation';before:UnitState;after:UnitState;revertedAt?:string};
+export type MeasurementInput={indicatorName:string;normalizedName:string|null;kind:'numeric'|'text';rawValue:string;numericValue:number|null;operator:'='|'<'|'>'|'<='|'>='|null;unit:string|null;originalUnit?:string|null;normalizedUnit?:string|null;unitStatus?:UnitState['unitStatus'];unitCorrections?:UnitCorrection[];referenceText:string|null;referenceBounds:ReferenceBounds|null};
 export type MeasurementRecord=MeasurementInput&{id:string;documentId:string;medicalDate:string;reviewed:boolean};
 export type DocumentMetadata={title:string;category:DocumentCategory;medicalDate:string;institution:string|null;subcategory:string|null;summary:string|null;conclusions:string|null;extractionConfidence:Record<string,Confidence>;measurements:MeasurementInput[]};
 export type DocumentRecord=Omit<DocumentMetadata,'measurements'>&{id:string;originalName:string;mime:string;size:number;sha256:string;fileKey:string;pendingFileKeys?:string[];uploadedAt:string;updatedAt:string;version:number;reviewStatus:'confirmed';processingStatus:'confirmed'|'deletion-pending';measurements:MeasurementRecord[]};

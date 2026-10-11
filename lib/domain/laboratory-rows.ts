@@ -1,5 +1,6 @@
+import {prepareMeasurementUnit} from './unit-normalization';
 import type {MeasurementInput,ReferenceBounds} from './types';
-import {canonicalUnit,isReferenceLabel} from './measurement-labels';
+import {isReferenceLabel} from './measurement-labels';
 const numeric='-?(?:\\d{1,3}(?:[.,]\\d{3})+(?:[.,]\\d+)?|\\d+(?:[.,]\\d+)?)';
 export function reportNumber(raw:string):number{
  const clean=raw.replace(/\s/g,'');
@@ -43,7 +44,7 @@ export function laboratoryMeasurements(text:string):MeasurementInput[]{
    let tail=m[4].trim().replace(/^[*↑↓]+\s*/,'');let unit:string|null=null;
    if(unitPattern.test(tail)){
     const u=/^(?:\/\s*[^\s\t]+|mm\s+de\s+Hg|x\s*10\^?\d+\s*\/\s*\w+|[^\s\t]+)(?:\s*\/\s*[a-zA-Zµμ0-9]+)?/.exec(tail);
-    if(u){unit=canonicalUnit(u[0]);tail=tail.slice(u[0].length).trim();}
+    if(u){unit=u[0];tail=tail.slice(u[0].length).trim();}
    }
    // Avoid treating a date or a report identifier as a result.
    if(!unit&&/^[/.]\d/.test(tail))continue;
@@ -65,5 +66,5 @@ export function laboratoryMeasurements(text:string):MeasurementInput[]{
   m.referenceBounds=selected?referenceBounds(selected):null;
   if(selected)m.referenceText=selected;
  }
- return measurements;
+ return measurements.map(prepareMeasurementUnit);
 }

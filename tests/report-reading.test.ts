@@ -29,6 +29,6 @@ it('does not extract patient identifiers or reference population rows as results
 });
 it('keeps adult male references instead of applying female or child ranges',()=>{
  const report=parseReport('Sexo: M\nEdad: 66 años\nCreatinina 1,07 mg/dl Mujeres: 0,52 - 1,04 mg/dl\nHombres: 0,66 - 1,25 mg/dl\nPlaquetas 213000 / ul Neonatos: 150000 - 553000 /ul\nNiños: 150000 - 500000 /ul\nAdultos: 150000 - 450000 /ul');
- expect(report.measurements[0].referenceBounds?.upper).toBe(1.25);expect(report.measurements[1].unit).toBe('/ul');expect(report.measurements[1].referenceBounds?.upper).toBe(450000);
+ expect(report.measurements[0].referenceBounds?.upper).toBe(1.25);expect(report.measurements[1].unit).toBe('/ ul');expect(report.measurements[1].normalizedUnit).toBe('/µL');expect(report.measurements[1].referenceBounds?.upper).toBe(450000);
 });
 it('does not assign a demographic-specific range without a matching patient context',()=>{expect(parseReport('Creatinina 1,07 mg/dl Mujeres: 0,52 - 1,04 mg/dl\nHombres: 0,66 - 1,25 mg/dl').measurements[0].referenceBounds).toBeNull();});

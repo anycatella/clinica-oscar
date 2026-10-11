@@ -1,0 +1,22 @@
+import {describe,it,expect} from 'vitest';
+import {canonicalUnit} from '../lib/domain/measurement-labels';
+import {compareDates,groupComparisons} from '../lib/domain/comparisons';
+import {parseReport} from '../lib/domain/parse-report';
+import type {MeasurementRecord} from '../lib/domain/types';
+const row=(unit:string|null,date='2026-01-01',name='Creatinina'):MeasurementRecord=>({id:date+String(unit),documentId:date,medicalDate:date,indicatorName:name,normalizedName:null,kind:'numeric',rawValue:'90',numericValue:90,operator:'=',unit,referenceText:null,referenceBounds:null,reviewed:true});
+describe('general unit normalization',()=>{
+ it('normalizes explicit format equivalents',()=>{expect(['mg/dl','mg / dL','mg／dL'].map(canonicalUnit)).toEqual(['mg/dL','mg/dL','mg/dL']);expect(canonicalUnit('/mm3')).toBe('/mm³');expect(canonicalUnit('fl')).toBe('fL');});
+ it('does not repair ambiguous OCR without confirmation',()=>{for(const unit of ['/mm?','mm:','g/','mgj/dl','UN','U/'])expect(canonicalUnit(unit)).toBeNull();});
+ it('keeps equivalent units in one history without changing original rows',()=>{const rows=[row('mg/dl'),row('mg/dL','2026-02-01')];expect(groupComparisons(rows)).toHaveLength(1);expect(rows[0].unit).toBe('mg/dl');});
+ it('never compares two missing units',()=>expect(compareDates([row(null),row(null,'2026-02-01')],['2026-01-01','2026-02-01'],{})[0].direction).toBe('unit-review-required'));
+ it('keeps OCR-related results together and blocks direction',()=>{const rows=[row('mgj/dl'),row('mg/dL','2026-02-01')];expect(groupComparisons(rows)).toHaveLength(1);expect(compareDates(rows,['2026-01-01','2026-02-01'],{})[0].direction).toBe('unit-review-required');});
+ it('does not combine genuinely different units or similarly named indicators',()=>{expect(groupComparisons([row('mg/dL'),row('mmol/L','2026-02-01')])).toHaveLength(2);expect(groupComparisons([row('U/L','2026-01-01','GOT'),row('U/L','2026-02-01','GPT')])).toHaveLength(2);});
+ it('retains raw units at extraction',()=>{const m=parseReport('Creatinina 0,94 mgj/dl 0,66 - 1,25').measurements[0];expect(m.unit).toBe('mgj/dl');expect(m.originalUnit).toBe('mgj/dl');expect(m.normalizedUnit).toBeNull();});
+});
+import {chartMeasurements,normalizationPreview,correctUnit,revertUnitCorrection} from '../lib/domain/unit-normalization';
+it('excludes missing and OCR units from history graphs',()=>{expect(chartMeasurements([row('mg/dl'),row('mgj/dl'),row(null)],'mg/dL')).toHaveLength(1);expect(chartMeasurements([row(null)],null)).toEqual([]);});
+it('confirmation and undo preserve the original OCR token and all values',()=>{const raw=row('mgj/dl');const corrected=correctUnit(raw,'mg/dL','confirmation');expect(corrected.unit).toBe('mgj/dl');expect(corrected.originalUnit).toBe('mgj/dl');expect(chartMeasurements([corrected],'mg/dL')).toHaveLength(1);const reverted=revertUnitCorrection(corrected);expect(reverted.normalizedUnit).toBeNull();expect(reverted.unitCorrections?.[0].revertedAt).toBeTruthy();expect(reverted.numericValue).toBe(raw.numericValue);});
+it('contextual suggestions use the same document and remain unresolved',()=>{const m={...row('mgj/dl'),referenceText:'Hombres 0,66 - 1,25 mg/dl'};const p=normalizationPreview({measurements:[m]} as never)[0];expect(p.proposals[0].unit).toBe('mg/dL');expect(p.safe).toBe(false);expect(p.state.normalizedUnit).toBeNull();});
+it('keeps an unresolved unit separate when multiple compatible families exist',()=>{const rows=[row('mg/dL'),row('mmol/L','2026-02-01'),row(null,'2026-03-01')];const groups=groupComparisons(rows);expect(groups).toHaveLength(3);expect(groups.find(g=>g.unit===null)?.rows[0].unit).toBeNull();});
+it('only formats exact identities and never borrows a unit into a row',()=>{const rows=[row('fL','2026-01-01','VCM'),row(null,'2026-02-01','VCM')];const group=groupComparisons(rows)[0];expect(group.rows.find(r=>r.medicalDate==='2026-02-01')?.unit).toBeNull();expect(chartMeasurements(group.rows,group.unit)).toHaveLength(1);});
+it('preserves prefix scales and never converts values',()=>{expect(groupComparisons([row('g/L'),row('mg/L','2026-02-01')])).toHaveLength(2);expect(canonicalUnit('mg/dL')).not.toBe(canonicalUnit('mg/L'));});
