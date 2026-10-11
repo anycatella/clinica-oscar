@@ -15,7 +15,7 @@ export function unitProposals(row:MeasurementInput,document:Pick<DocumentRecord,
  if(effectiveUnit(row))return [];
  const evidence=new Map<string,string>();
  const texts=[row.referenceText??'',...document.measurements.filter(r=>indicatorIdentity(r)===indicatorIdentity(row)).flatMap(r=>[r.unit??'',r.referenceText??''])];
- for(const text of texts){for(const token of text.split(/\s+|[;,()]/)){const normalized=canonicalUnit(token);if(normalized)evidence.set(normalized,text);}}
+ for(const text of texts){const joined=text.normalize('NFKC').replace(/[⁄∕]/g,'/').replace(/([a-zµμ])\s+\/\s*/gi,'$1/').replace(/\/\s+/g,'/');for(const token of joined.split(/\s+|[;,()]/)){const normalized=canonicalUnit(token);if(normalized)evidence.set(normalized,text);}}
  return [...evidence].map(([unit,source])=>({unit,source}));
 }
 export function normalizationPreview(document:DocumentRecord){return document.measurements.filter(row=>row.kind==='numeric'&&!isReferenceLabel(row.indicatorName)).map(row=>({row,state:unitState(row),original:row.originalUnit===undefined?row.unit:row.originalUnit,safe:!!canonicalUnit(row.unit)&&row.unitStatus!=='confirmed'&&row.unitStatus!=='unresolved'&&(row.normalizedUnit!==canonicalUnit(row.unit)||row.originalUnit===undefined),proposals:unitProposals(row,document)}));}
