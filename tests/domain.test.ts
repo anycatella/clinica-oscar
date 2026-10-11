@@ -23,6 +23,23 @@ describe('two-date comparisons',()=>{
  it('missing date is not comparable',()=>expect(compareDates([measure(90,'2026-01-01')],['2026-01-01','2026-02-01'],{})[0].direction).toBe('not-comparable'));
  it('same-day results require explicit selection',()=>{const rows=[measure(90,'2026-01-01'),measure(95,'2026-01-01'),measure(98,'2026-02-01')];expect(compareDates(rows,['2026-01-01','2026-02-01'],{})[0].direction).toBe('selection-required');const key=groupComparisons(rows)[0].key;expect(compareDates(rows,['2026-01-01','2026-02-01'],{[`${key}:2026-01-01`]:'2026-01-01-95'})[0].direction).toBe('up');});
  it('keeps different units apart',()=>expect(groupComparisons([measure(90,'2026-01-01'),measure(5,'2026-02-01',{unit:'mmol/L'})])).toHaveLength(2));
+ it('compares red cell counts despite OCR variants of cubic millimetres',()=>{
+  const rows=[measure(4.5,'2026-01-01',{indicatorName:'Glóbulos Rojos',normalizedName:null,unit:'/mm:'}),measure(4.8,'2026-02-01',{indicatorName:'Glóbulos Rojos',normalizedName:null,unit:'/mm?'})];
+  const result=compareDates(rows,['2026-01-01','2026-02-01'],{});
+  expect(result).toHaveLength(1);
+  expect(result[0]).toMatchObject({unit:'/mm³',direction:'up',earlier:{numericValue:4.5},later:{numericValue:4.8}});
+ });
+ it('shows one VCM row but requests unit review when one result lacks a unit',()=>{
+  const rows=[measure(90,'2026-01-01',{indicatorName:'VCM',normalizedName:null,unit:'fl'}),measure(92,'2026-02-01',{indicatorName:'VCM',normalizedName:null,unit:null})];
+  const result=compareDates(rows,['2026-01-01','2026-02-01'],{});
+  expect(result).toHaveLength(1);
+  expect(result[0]).toMatchObject({unit:'fL',direction:'unit-review-required',earlier:{numericValue:90},later:{numericValue:92}});
+ });
+ it('omits reference labels from comparisons and the indicator selector',()=>{
+  const rows=[measure(25,'2026-09-21',{indicatorName:'Vitamina D',normalizedName:null,unit:'ng/ml'}),measure(30,'2026-10-05',{indicatorName:'Vitamina D',normalizedName:null,unit:'ng/ml'}),measure(100,'2026-10-05',{indicatorName:'Suficiente',normalizedName:null,unit:null}),measure(100,'2026-10-05',{indicatorName:'Limite de Seguridad Superior',normalizedName:null,unit:'ng/ml'})];
+  expect(groupComparisons(rows).map(group=>group.label)).toEqual(['Vitamina D']);
+  expect(compareDates(rows,['2026-09-21','2026-10-05'],{}).map(row=>row.label)).toEqual(['Vitamina D']);
+ });
  it('excludes unreviewed measurements',()=>expect(groupComparisons([measure(90,'2026-01-01',{reviewed:false})])).toHaveLength(0));
  it('does not compare censored values as exact',()=>expect(compareDates([measure(90,'2026-01-01'),measure(95,'2026-02-01',{operator:'<'})],['2026-01-01','2026-02-01'],{})[0].direction).toBe('not-comparable'));
  it('respects exclusive range bounds',()=>expect(referenceStatus(measure(99,'2026-01-01',{referenceBounds:{lower:70,upper:99,lowerInclusive:true,upperInclusive:false}}))).toBe('high'));
@@ -36,6 +53,14 @@ describe('reading reports',()=>{
  it('keeps verbatim conclusions',()=>expect(parseReport('Tomografía\nConclusiones: Hallazgo de prueba.\nControl documentado.').conclusions).toBe('Hallazgo de prueba.\nControl documentado.'));
  it('marks uncertain date for review',()=>expect(parseReport('Sin fecha').extractionConfidence.documentDate).toBe('low'));
  it('normalizes only reviewed aliases',()=>{expect(normalizeIndicator('Colesterol-HDL')).toBe('hdl');expect(normalizeIndicator('Marcador extraño')).toBe(null);});
+ it('repairs known OCR unit variants during new report extraction',()=>{
+  const rows=parseReport('Glóbulos Rojos 4,5 /mm: 4,0 - 5,0\nLeucocitos 6.500 /mm? 4.000 - 10.000\nVCM 91 fl 80 - 100').measurements;
+  expect(rows.map(row=>row.unit)).toEqual(['/mm³','/mm³','fL']);
+ });
+ it('does not extract vitamin D reference labels as indicators',()=>{
+  const rows=parseReport('Vitamina D 25 ng/ml 20 - 100\nSuficiente 30 ng/ml\nLímite de Seguridad Superior 100 ng/ml').measurements;
+  expect(rows.map(row=>row.indicatorName)).toEqual(['Vitamina D']);
+ });
  it('rejects impossible calendar dates',()=>expect(validateDate('2026-02-30')).toBe(false));
 });
 describe('chemotherapy and dashboard',()=>{

@@ -1,4 +1,5 @@
 import type {MeasurementInput,ReferenceBounds} from './types';
+import {canonicalUnit,isReferenceLabel} from './measurement-labels';
 const numeric='-?(?:\\d{1,3}(?:[.,]\\d{3})+(?:[.,]\\d+)?|\\d+(?:[.,]\\d+)?)';
 export function reportNumber(raw:string):number{
  const clean=raw.replace(/\s/g,'');
@@ -15,7 +16,7 @@ export function referenceBounds(ref:string|null):ReferenceBounds|null{
 }
 const metadata=/documento|identificador|cobertura|carnet|sexo|fecha|p[aá]gina|impresi[oó]n|nacimiento|edad|protocolo|orden|dni|matr[ií]cula|paciente|m[eé]todo|resultado|referencia|laboratorio|tel[eé]fono|domicilio|solicitante/i;
 const referencePopulation=/^(?:adultos?|niños?|neonatos?|hombres|mujeres|embarazadas|nivel(?:es)?|reci[eé]n nacidos|varones)\b/i;
-const ignored=(name:string)=>metadata.test(name)||referencePopulation.test(name.trim());
+const ignored=(name:string)=>metadata.test(name)||referencePopulation.test(name.trim())||isReferenceLabel(name);
 const unitPattern=/^(?:[%/µμ]|(?:mg|g|gr|ng|pg|ug|mcg|mmol|mol|mEq|UI|U|mUI|uUI|fl|fL|mm|cm|seg|s|min|c[eé]l|cel|x\s?10|10\^))/i;
 export function laboratoryMeasurements(text:string):MeasurementInput[]{
  const lines=text.split(/\n/).map(s=>s.replace(/[|]/g,'\t').trim()).filter(Boolean);
@@ -42,7 +43,7 @@ export function laboratoryMeasurements(text:string):MeasurementInput[]{
    let tail=m[4].trim().replace(/^[*↑↓]+\s*/,'');let unit:string|null=null;
    if(unitPattern.test(tail)){
     const u=/^(?:\/\s*[^\s\t]+|mm\s+de\s+Hg|x\s*10\^?\d+\s*\/\s*\w+|[^\s\t]+)(?:\s*\/\s*[a-zA-Zµμ0-9]+)?/.exec(tail);
-    if(u){unit=u[0].replace(/\s/g,'');tail=tail.slice(u[0].length).trim();}
+    if(u){unit=canonicalUnit(u[0]);tail=tail.slice(u[0].length).trim();}
    }
    // Avoid treating a date or a report identifier as a result.
    if(!unit&&/^[/.]\d/.test(tail))continue;

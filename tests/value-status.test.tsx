@@ -11,4 +11,9 @@ describe('reference highlighting',()=>{
  });
  it('does not assign a normal color without a numerical reference',()=>expect(renderToStaticMarkup(<MeasurementValue row={row(90,{referenceBounds:null})}/>)).toContain('measurement-value unknown'));
  it('does not classify a censored value as an exact value',()=>expect(renderToStaticMarkup(<MeasurementValue row={row(90,{operator:'<'})}/>)).toContain('measurement-value unknown'));
+ it('shows a repaired cubic-millimetre unit for an existing OCR result',()=>{
+  const html=renderToStaticMarkup(<MeasurementValue row={row(4.5,{unit:'/mm?'})}/>);
+  expect(html).toContain('/mm³');
+  expect(html).not.toContain('/mm?');
+ });
 });
