@@ -3,7 +3,12 @@ const units=['%','fL','pg','g/L','g/dL','mg/L','mg/dL','mg/mL','ng/mL','ng/L','�
 function formatToken(unit:string){return unit.normalize('NFKC').replace(/[μµ]/g,'µ').replace(/[／⁄∕]/g,'/').replace(/\s+/g,'').replace(/\^3/g,'3');}
 const dictionary=new Map(units.map(unit=>[formatToken(unit).toLowerCase(),unit]));
 dictionary.set('/ul','/µL');dictionary.set('ul','µL');
-export function canonicalUnit(unit:string|null):string|null{if(!unit?.trim())return null;return dictionary.get(formatToken(unit).toLowerCase())??null;}
+export function canonicalUnit(unit:string|null):string|null{if(!unit?.trim())return null;const token=formatToken(unit);
+ // SI prefix case can change magnitude (mg vs Mg, mL vs ML).
+ const numerator=token.split('/')[0];if(/^[A-Z]/.test(numerator)&&!['U','UI','IU','L'].includes(numerator))return null;
+ if(/^(?:[kpnumµ]?G)(?:$|\/)/.test(token))return null;
+ if(/\/(?:M|D)/.test(token))return null;
+ return dictionary.get(token.toLowerCase())??null;}
 export function isReferenceLabel(name:string):boolean{
  const plain=name.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
  return plain==='suficiente'||plain==='limite de seguridad superior';
