@@ -9,3 +9,4 @@ it('downloads a clearly labelled fictional PDF and filters by category',async()=
 
 import {apiTarget} from '../lib/client/demo-mode';
 it('routes demo reads to the isolated API and leaves the real portal unchanged',()=>{expect(apiTarget('/api/history','/demo')).toBe('/api/demo/history');expect(apiTarget('/api/documents/demo-analysis-1/file','/demo/')).toBe('/api/demo/documents/demo-analysis-1/file');expect(apiTarget('/api/history','/')).toBe('/api/history');});
+it('does not double-prefix local demo operations',()=>expect(apiTarget('/api/demo/reset','/demo')).toBe('/api/demo/reset'));

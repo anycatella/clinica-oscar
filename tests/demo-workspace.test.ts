@@ -1,0 +1,16 @@
+import {it,expect} from 'vitest';
+import {seedDemo,runDemoRequest} from '../lib/client/demo-workspace';
+import {buildReportPdf} from '../lib/domain/report-pdf';
+import type {DocumentRecord} from '../lib/domain/types';
+const req=(path:string,method='GET',body?:BodyInit)=>new Request('https://demo.test/api/demo/'+path,{method,body});
+it('uploads, rejects duplicates, edits, replaces, downloads, deletes and restores originals in the isolated workspace',async()=>{
+ const state=await seedDemo();const base=structuredClone(Object.values(state.documents)[0]);const upload=(title:string)=>{const d={...base,title};const form=new FormData();form.set('file',new File([buildReportPdf(d) as unknown as BlobPart],'archivo-ficticio.pdf',{type:'application/pdf'}));form.set('metadata',JSON.stringify(d));form.set('personalUseConfirmed','true');return form;};
+ const added=await runDemoRequest(state,req('documents','POST',upload('Ensayo ficticio nuevo')));expect(added.status).toBe(201);const saved=(await added.json() as {document:DocumentRecord}).document;expect(saved.title).toContain('FICTICIO');expect(Object.keys(state.documents)).toHaveLength(7);
+ expect((await (await runDemoRequest(state,req('documents','POST',upload('Ensayo ficticio nuevo')))).json() as {duplicate:boolean}).duplicate).toBe(true);
+ const edited=await runDemoRequest(state,req('documents/'+saved.id,'PATCH',JSON.stringify({expectedVersion:1,metadata:{...saved,title:'Editado',medicalDate:'2026-10-01'}})));const d=await edited.json() as DocumentRecord;expect(d.title).toBe('FICTICIO · Editado');expect(d.medicalDate).toBe('2026-10-01');expect((await runDemoRequest(state,req('documents/'+d.id+'/file'))).status).toBe(200);
+ const form=upload('Otro PDF ficticio');form.set('expectedVersion','2');const replaced=await (await runDemoRequest(state,req('documents/'+d.id+'/replacement','POST',form))).json() as {document:DocumentRecord};expect(replaced.document.sha256).not.toBe(saved.sha256);
+ const bytes=await (await runDemoRequest(state,req('documents/'+d.id+'/file'))).arrayBuffer();await runDemoRequest(state,req('documents/'+d.id,'DELETE',JSON.stringify({expectedVersion:replaced.document.version,confirmed:true})));expect(state.documents[d.id]).toBeUndefined();expect(Object.keys(state.deleted)).toContain(d.id);
+ await runDemoRequest(state,req('restore','POST'));expect(state.documents[d.id]).toBeTruthy();expect(new Uint8Array(await (await runDemoRequest(state,req('documents/'+d.id+'/file'))).arrayBuffer())).toEqual(new Uint8Array(bytes));
+});
+it('restores examples without discarding uploaded records and does not mutate the source fixture',async()=>{const state=await seedDemo();const id=Object.keys(state.documents)[0];state.documents[id].title='Changed';await runDemoRequest(state,req('reset','POST'));expect(state.documents[id].title).toContain('FICTICIO');expect(state.sessions).toHaveLength(3);});
+it('rejects stale edits using the same version rules as the real app',async()=>{const state=await seedDemo();const d=Object.values(state.documents)[0];await expect(runDemoRequest(state,req('documents/'+d.id,'PATCH',JSON.stringify({expectedVersion:0,metadata:d})))).rejects.toThrow('otra persona');expect(state.documents[d.id].version).toBe(1);});
