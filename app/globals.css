@@ -78,3 +78,5 @@ h1,.welcome-card h2{font-family:Georgia,'Times New Roman',serif;font-weight:400;
 
 .install-identity{display:flex;align-items:center;gap:18px;margin-bottom:24px}.install-identity img{display:block;border-radius:18px;box-shadow:0 5px 15px #163e5c20}.install-identity p{margin:6px 0 0}
 .unit-review-summary{display:flex;align-items:center;justify-content:space-between;gap:24px;margin:24px 0}.unit-review-summary h2{font-size:24px;margin-bottom:8px}.unit-review-summary p{margin:0}.review-content table td{min-width:150px}.review-content table td:last-child{min-width:260px}.review-content table td p{margin:10px 0}.review-content table label{display:block}.review-content table input{width:100%;min-height:48px}.review-content select{max-width:100%}@media(max-width:700px){.unit-review-summary{align-items:stretch;flex-direction:column}}
+
+.demo-entry{display:block;margin:22px 20px;padding:14px 16px;border:1px solid #7595aa;border-radius:10px;color:#fff;text-decoration:none;font-size:17px;line-height:1.4}.demo-entry:hover{background:#24485e}

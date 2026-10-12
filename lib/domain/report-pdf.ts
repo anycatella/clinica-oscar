@@ -9,7 +9,7 @@ function wrap(text:string,max:number){return text.split(/\n/).flatMap(line=>{con
 export function buildReportPdf(record:DocumentRecord):Uint8Array{
  const pages:string[]=[];let commands='',y=756;
  const text=(value:string,x:number,size=11,bold=false,color='0.08 0.23 0.34')=>{commands+=`${color} rg BT /${bold?'F2':'F1'} ${size} Tf 1 0 0 1 ${x} ${y} Tm (${escape(value)}) Tj ET\n`;};
- const header=()=>{y=792;text('CLÍNICA OSCAR',40,19,true);y=766;text('Informe del documento',40,12);y=744;};
+ const header=()=>{y=792;text('CLÍNICA OSCAR',40,19,true);y=766;text(record.id.startsWith('demo-')?'FICTICIO - SOLO DEMOSTRACION':'Informe del documento',40,12);y=744;};
  const finish=()=>{y=30;text(`Resumen automático · ${pages.length+1}`,40,9);pages.push(commands);commands='';};
  const ensure=(height:number)=>{if(y-height<70){finish();header();}};
  const paragraph=(value:string,size=11,bold=false)=>{for(const line of wrap(value,size>=16?50:90)){ensure(size+6);text(line,40,size,bold);y-=size+6;}y-=8;};
@@ -20,7 +20,7 @@ export function buildReportPdf(record:DocumentRecord):Uint8Array{
  }
  if(record.summary){y-=12;paragraph('Resumen del documento',12,true);paragraph(record.summary);}
  if(record.conclusions){paragraph('Conclusiones del original',12,true);paragraph(record.conclusions);}
- paragraph('Datos extraídos automáticamente. Referencias tomadas del documento. El original se conserva en Clínica Oscar.',10);
+ paragraph(record.id.startsWith('demo-')?'Todos los datos de este PDF son ficticios y se crearon para una demostración. No corresponde a una persona real.':'Datos extraídos automáticamente. Referencias tomadas del documento. El original se conserva en Clínica Oscar.',10);
  finish();
  const objects:string[]=['<< /Type /Catalog /Pages 2 0 R >>','', '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>','<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>'];
  const pageIds:number[]=[];

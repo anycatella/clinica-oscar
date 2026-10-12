@@ -1,0 +1,13 @@
+import {it,expect} from 'vitest';
+import {demoDocuments} from '../lib/domain/demo-data';
+import {demoResponse} from '../lib/server/demo';
+import {comparisonMeasurements} from '../lib/domain/study-measurements';
+import {compareDates} from '../lib/domain/comparisons';
+it('provides labelled fictional analyses and studies with compatible histories',()=>{expect(demoDocuments.filter(d=>d.category==='analysis')).toHaveLength(3);expect(demoDocuments.filter(d=>d.category==='study')).toHaveLength(3);for(const d of demoDocuments){expect(d.title).toContain('FICTICIO');expect(d.summary).toContain('No corresponde a una persona real');expect(d.measurements.every(m=>m.documentId===d.id)).toBe(true);}const rows=compareDates(comparisonMeasurements(demoDocuments.filter(d=>d.category==='study')),['2026-09-21','2026-10-05'],{});expect(rows).toHaveLength(3);expect(rows.every(r=>['up','down','unchanged'].includes(r.direction))).toBe(true);});
+it('serves only demo records without calling real storage and rejects writes',async()=>{const r=await demoResponse(new Request('https://example.test/api/demo/history'));expect(r.status).toBe(200);expect(((await r.json()) as {id:string}[]).every((d:{id:string})=>d.id.startsWith('demo-'))).toBe(true);expect((await demoResponse(new Request('https://example.test/api/demo/documents',{method:'POST'}))).status).toBe(405);expect((await demoResponse(new Request('https://example.test/api/demo/documents/real-id/file'))).status).toBe(404);});
+it('downloads a clearly labelled fictional PDF and filters by category',async()=>{const r=await demoResponse(new Request('https://example.test/api/demo/documents/'+demoDocuments[0].id+'/file'));expect(r.headers.get('Content-Type')).toBe('application/pdf');expect(await r.text()).toContain('FICTICIO');const list=await demoResponse(new Request('https://example.test/api/demo/documents?category=study'));expect(((await list.json()) as {items:{category:string}[]}).items.every((d:{category:string})=>d.category==='study')).toBe(true);});
+
+import {apiTarget} from '../lib/client/demo-mode';
+it('routes demo reads to the isolated API and leaves the real portal unchanged',()=>{expect(apiTarget('/api/history','/demo')).toBe('/api/demo/history');expect(apiTarget('/api/documents/demo-analysis-1/file','/demo/')).toBe('/api/demo/documents/demo-analysis-1/file');expect(apiTarget('/api/history','/')).toBe('/api/history');});
+import {readFileSync} from 'node:fs';
+it('installs the demo with a distinct identity and opens the fictional portal',()=>{const manifest=JSON.parse(readFileSync(new URL('../public/demo.webmanifest',import.meta.url),'utf8'));expect(manifest.id).toBe('/demo');expect(manifest.start_url).toBe('/demo');expect(manifest.name).toContain('Demo');});

@@ -1,3 +1,4 @@
+import {demoResponse} from '../../../lib/server/demo';
 import { services } from '../../../lib/server/runtime';
 import { authorize } from '../../../lib/server/access';
 import { AppError } from '../../../lib/server/errors';
@@ -7,6 +8,7 @@ export const dynamic='force-dynamic';
 const json=(data:unknown,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
 async function handle(request:Request){
  try{
+ if(new URL(request.url).pathname.startsWith('/api/demo/'))return demoResponse(request);
  const s=services();if(!await authorize(request,s.keyHash))return json({error:'Abrí el enlace compartido de Clínica Oscar para acceder.'},401);
  const url=new URL(request.url),parts=url.pathname.split('/').filter(Boolean).slice(1);const [area,id,action]=parts;
  if(request.method==='GET'){
